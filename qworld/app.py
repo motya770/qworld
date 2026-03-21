@@ -1,7 +1,7 @@
 import sys
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout,
-    QHBoxLayout, QSplitter, QLabel,
+    QHBoxLayout, QSplitter, QLabel, QTabWidget,
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
@@ -18,6 +18,7 @@ from qworld.widgets.gate_toolbar import GateToolbar
 from qworld.widgets.rotation_controls import RotationControls
 from qworld.widgets.state_info import StateInfo
 from qworld.widgets.measurement_widget import MeasurementWidget
+from qworld.panels.simulator_panel import SimulatorPanel
 
 
 DARK_THEME = """
@@ -44,6 +45,30 @@ QToolTip {
     padding: 4px;
     font-size: 11px;
 }
+QTabWidget::pane {
+    border: 1px solid #313244;
+    background: #1e1e2e;
+}
+QTabBar::tab {
+    background: #181825;
+    color: #a6adc8;
+    padding: 8px 20px;
+    border: 1px solid #313244;
+    border-bottom: none;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    margin-right: 2px;
+    font-size: 13px;
+    font-weight: bold;
+}
+QTabBar::tab:selected {
+    background: #1e1e2e;
+    color: #cba6f7;
+}
+QTabBar::tab:hover:!selected {
+    background: #313244;
+    color: #cdd6f4;
+}
 """
 
 
@@ -64,9 +89,13 @@ class MainWindow(QMainWindow):
 
         self.quantum_state = QuantumState()
 
-        central = QWidget()
-        self.setCentralWidget(central)
-        main_layout = QVBoxLayout(central)
+        # Tab widget as central widget
+        self.tabs = QTabWidget()
+        self.setCentralWidget(self.tabs)
+
+        # Tab 1: Visualizer (existing panels)
+        visualizer = QWidget()
+        main_layout = QVBoxLayout(visualizer)
         main_layout.setContentsMargins(4, 4, 4, 4)
         main_layout.setSpacing(4)
 
@@ -147,6 +176,12 @@ class MainWindow(QMainWindow):
         middle_splitter.setSizes([350, 380, 380, 400])
 
         main_layout.addWidget(middle_splitter)
+
+        self.tabs.addTab(visualizer, "Visualizer")
+
+        # Tab 2: Circuit Simulator
+        self.simulator = SimulatorPanel()
+        self.tabs.addTab(self.simulator, "Circuit Simulator")
 
         # Status bar
         self.statusBar().showMessage("Ready \u2014 State: |0\u27e9")

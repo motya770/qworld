@@ -188,13 +188,20 @@ class QubitGridWidget(QWidget):
             painter.drawEllipse(QPointF(dx, dy), dot_r * 2.5, dot_r * 2.5)
 
     def _draw_qubit(self, painter, pos, idx, p1, cell):
-        """Draw a single glowing qubit orb with particles."""
+        """Draw a single glowing qubit orb with uncertainty cloud.
+
+        Physics-grounded visualisation:
+        - Color (blue→pink) = measurement probability P(|1⟩)
+        - Glow intensity     = degree of superposition
+        - Shimmer cloud      = quantum uncertainty (we don't know the
+          state until measured — more superposition → more shimmer)
+        """
         cx, cy = pos
-        sup = 1.0 - abs(2.0 * p1 - 1.0)          # 0 = classical, 1 = max superposition
+        sup = 1.0 - abs(2.0 * p1 - 1.0)   # 0 = definite, 1 = max superposition
         pulse = 0.5 + 0.5 * np.sin(self._phase * 1.2 + idx * 0.73)
         cr, cg, cb = self._qubit_color(p1)
 
-        # ── Layer 1: Outer glow ──
+        # ── Layer 1: Outer glow (probability field) ──
         glow_r = cell * (0.40 + 0.12 * sup * pulse)
         outer_a = int(45 + 80 * sup * pulse)
         grad = QRadialGradient(cx, cy, glow_r)
@@ -205,7 +212,7 @@ class QubitGridWidget(QWidget):
         painter.setPen(Qt.NoPen)
         painter.drawEllipse(QPointF(cx, cy), glow_r, glow_r)
 
-        # ── Layer 2: Inner halo (tighter, brighter) ──
+        # ── Layer 2: Inner halo ──
         halo_r = cell * (0.25 + 0.04 * sup * pulse)
         halo_a = int(70 + 90 * sup * pulse)
         halo = QRadialGradient(cx, cy, halo_r)
@@ -229,34 +236,37 @@ class QubitGridWidget(QWidget):
         painter.setPen(QPen(QColor(cr, cg, cb, 70), 0.8))
         painter.drawEllipse(QPointF(cx, cy), core_r, core_r)
 
-        # ── Layer 4: Energy ring ──
-        if sup > 0.12:
-            ring_a = int(50 * sup * (0.5 + 0.5 * pulse))
-            ring_r = cell * (0.24 + 0.025 * np.sin(self._phase * 0.9 + idx))
-            painter.setPen(QPen(QColor(cr, cg, cb, ring_a), 1.0, Qt.DashDotLine))
-            painter.setBrush(Qt.NoBrush)
-            painter.drawEllipse(QPointF(cx, cy), ring_r, ring_r)
-
-        # ── Layer 5: Orbiting particles ──
+        # ── Layer 4: Quantum uncertainty cloud ──
+        # In superposition we genuinely don't know the state — represent
+        # this as random shimmering dots that flicker in and out.
+        # More superposition → larger cloud, more active flicker.
         if sup > 0.04:
-            n_p = max(1, int(sup * 5))
+            n_p = int(sup * 8) + 2
             for pi in range(n_p):
-                speed = 1.1 + pi * 0.37
-                angle = (self._phase * speed
-                         + idx * 2.09
-                         + pi * (2.0 * np.pi / max(n_p, 1)))
-                orb_r = cell * (0.26 + 0.05 * np.sin(self._phase * 0.7 + pi))
-                px = cx + orb_r * np.cos(angle)
-                py = cy + orb_r * np.sin(angle)
-                pa = int(90 + 120 * sup * pulse)
-                ps = 1.5 + sup * 2.0
-                pg = QRadialGradient(px, py, ps * 2.5)
-                pg.setColorAt(0.0, QColor(255, 255, 255, pa))
-                pg.setColorAt(0.4, QColor(cr, cg, cb, int(pa * 0.45)))
+                seed = idx * 97 + pi * 31       # deterministic but chaotic
+                # Pseudo-random position that drifts unpredictably
+                ang1 = self._phase * 0.3 + seed * 1.7
+                ang2 = self._phase * 0.7 + seed * 0.91
+                angle = np.sin(ang1) * np.pi + np.cos(ang2) * np.pi
+                dist = cell * (0.12 + 0.18 * abs(np.sin(ang1 * 0.6 + seed)))
+
+                px = cx + dist * np.cos(angle)
+                py = cy + dist * np.sin(angle)
+
+                # Flicker: each dot fades in and out independently
+                flicker = max(0.0, np.sin(self._phase * 1.6 + seed * 3.1))
+                alpha = int(75 * sup * flicker)
+                if alpha < 5:
+                    continue
+
+                ps = 1.0 + sup * 1.5
+                pg = QRadialGradient(px, py, ps * 2.0)
+                pg.setColorAt(0.0, QColor(255, 255, 255, alpha))
+                pg.setColorAt(0.4, QColor(cr, cg, cb, int(alpha * 0.5)))
                 pg.setColorAt(1.0, QColor(cr, cg, cb, 0))
                 painter.setBrush(QBrush(pg))
                 painter.setPen(Qt.NoPen)
-                painter.drawEllipse(QPointF(px, py), ps * 2.5, ps * 2.5)
+                painter.drawEllipse(QPointF(px, py), ps * 2.0, ps * 2.0)
 
         # ── Layer 6: Text labels ──
         painter.setPen(QColor(0xCD, 0xD6, 0xF4, 210))

@@ -87,18 +87,18 @@ class QuantumState(QObject):
 
     def get_bloch_vector(self) -> tuple[float, float, float]:
         rho = self.density_matrix
-        x = float(expect(sigmax(), rho))
-        y = float(expect(sigmay(), rho))
-        z = float(expect(sigmaz(), rho))
+        x = float(np.real(expect(sigmax(), rho)))
+        y = float(np.real(expect(sigmay(), rho)))
+        z = float(np.real(expect(sigmaz(), rho)))
         return (x, y, z)
 
     def get_bloch_history(self) -> list[tuple[float, float, float]]:
         result = []
         for s in self._history:
             rho = ket2dm(s) if s.isket else s
-            x = float(expect(sigmax(), rho))
-            y = float(expect(sigmay(), rho))
-            z = float(expect(sigmaz(), rho))
+            x = float(np.real(expect(sigmax(), rho)))
+            y = float(np.real(expect(sigmay(), rho)))
+            z = float(np.real(expect(sigmaz(), rho)))
             result.append((x, y, z))
         return result
 
@@ -130,9 +130,9 @@ class QuantumState(QObject):
 
     def get_polarization_params(self):
         rho = self.density_matrix
-        S1 = float(expect(sigmaz(), rho))
-        S2 = float(expect(sigmax(), rho))
-        S3 = float(expect(sigmay(), rho))
+        S1 = float(np.real(expect(sigmaz(), rho)))
+        S2 = float(np.real(expect(sigmax(), rho)))
+        S3 = float(np.real(expect(sigmay(), rho)))
         psi = 0.5 * np.arctan2(S2, S1)
         chi = 0.5 * np.arcsin(np.clip(S3, -1, 1))
         return S1, S2, S3, psi, chi

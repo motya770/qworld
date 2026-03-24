@@ -135,9 +135,9 @@ class EntangledState(QObject):
     def get_reduced_bloch(self, qubit: int) -> tuple[float, float, float]:
         """Get the Bloch vector of the reduced density matrix for qubit A (0) or B (1)."""
         rho_sub = self.density_matrix.ptrace(qubit)
-        x = float(expect(sigmax(), rho_sub))
-        y = float(expect(sigmay(), rho_sub))
-        z = float(expect(sigmaz(), rho_sub))
+        x = float(np.real(expect(sigmax(), rho_sub)))
+        y = float(np.real(expect(sigmay(), rho_sub)))
+        z = float(np.real(expect(sigmaz(), rho_sub)))
         return (x, y, z)
 
     def get_reduced_purity(self, qubit: int) -> float:
@@ -150,7 +150,7 @@ class EntangledState(QObject):
         ops = {"x": sigmax(), "y": sigmay(), "z": sigmaz()}
         op = ops[axis]
         corr_op = tensor(op, op)
-        return float(expect(corr_op, self.density_matrix))
+        return float(np.real(expect(corr_op, self.density_matrix)))
 
     def get_state_label(self) -> str:
         """Return a human-readable label for the current state."""
